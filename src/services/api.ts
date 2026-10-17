@@ -15,22 +15,36 @@ import {
 
 const BASE_URL = '/api';
 
+async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const response = await fetch(input, init);
+  if (response.ok) return response;
+
+  let message = `API request failed (${response.status}).`;
+  try {
+    const body = await response.json() as { error?: string; message?: string };
+    message = body.error || body.message || message;
+  } catch {
+    // Keep the HTTP status message when the backend did not return JSON.
+  }
+  throw new Error(message);
+}
+
 export const api = {
   // Auth & Roles
   async getUsers(): Promise<{ users: User[]; aiAvailable: boolean }> {
-    const res = await fetch(`${BASE_URL}/auth/users`);
+    const res = await apiFetch(`${BASE_URL}/auth/users`);
     return res.json();
   },
 
   async getStatus(): Promise<{ aiAvailable: boolean; aiModel: string; aiStatus: AIAvailability; environment: string }> {
-    const res = await fetch(`${BASE_URL}/auth/status`);
+    const res = await apiFetch(`${BASE_URL}/auth/status`);
     if (!res.ok) throw new Error(`AI status request failed (${res.status}).`);
     return res.json();
   },
 
   // Analytics
   async getOverview(): Promise<AnalyticsOverview> {
-    const res = await fetch(`${BASE_URL}/analytics/overview`);
+    const res = await apiFetch(`${BASE_URL}/analytics/overview`);
     return res.json();
   },
 
@@ -49,13 +63,13 @@ export const api = {
         if (v && v !== 'all') q.append(k, v);
       });
     }
-    const res = await fetch(`${BASE_URL}/incidents?${q.toString()}`);
+    const res = await apiFetch(`${BASE_URL}/incidents?${q.toString()}`);
     return res.json();
   },
 
   async getIncident(id: string, role?: Role) {
     const q = role ? `?role=${role}` : '';
-    const res = await fetch(`${BASE_URL}/incidents/${id}${q}`);
+    const res = await apiFetch(`${BASE_URL}/incidents/${id}${q}`);
     return res.json();
   },
 
@@ -68,7 +82,7 @@ export const api = {
     reporter_id: string;
     reporter_name: string;
   }): Promise<{ incident: Incident }> {
-    const res = await fetch(`${BASE_URL}/incidents`, {
+    const res = await apiFetch(`${BASE_URL}/incidents`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -81,7 +95,7 @@ export const api = {
   },
 
   async updateIncident(id: string, data: any): Promise<{ incident: Incident }> {
-    const res = await fetch(`${BASE_URL}/incidents/${id}`, {
+    const res = await apiFetch(`${BASE_URL}/incidents/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -94,7 +108,7 @@ export const api = {
   },
 
   async claimIncident(id: string, userId: string): Promise<{ incident: Incident }> {
-    const res = await fetch(`${BASE_URL}/incidents/${id}/claim`, {
+    const res = await apiFetch(`${BASE_URL}/incidents/${id}/claim`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: userId })
@@ -111,7 +125,7 @@ export const api = {
     user_id: string;
     reason?: string;
   }): Promise<{ incident: Incident }> {
-    const res = await fetch(`${BASE_URL}/incidents/${id}/assignment`, {
+    const res = await apiFetch(`${BASE_URL}/incidents/${id}/assignment`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -135,7 +149,7 @@ export const api = {
     user_name: string;
     user_role: Role;
   }): Promise<{ action: InvestigationAction }> {
-    const res = await fetch(`${BASE_URL}/incidents/${incidentId}/actions`, {
+    const res = await apiFetch(`${BASE_URL}/incidents/${incidentId}/actions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -156,7 +170,7 @@ export const api = {
     user_name: string;
     user_role: Role;
   }) {
-    const res = await fetch(`${BASE_URL}/incidents/${incidentId}/resolve`, {
+    const res = await apiFetch(`${BASE_URL}/incidents/${incidentId}/resolve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -176,7 +190,7 @@ export const api = {
     user_name: string;
     user_role: Role;
   }): Promise<{ escalation_id: string; status: string }> {
-    const res = await fetch(`${BASE_URL}/incidents/${incidentId}/escalate`, {
+    const res = await apiFetch(`${BASE_URL}/incidents/${incidentId}/escalate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -190,7 +204,7 @@ export const api = {
 
   async getEscalations(status?: string): Promise<{ escalations: EscalationRequest[] }> {
     const q = status && status !== 'all' ? `?status=${status}` : '';
-    const res = await fetch(`${BASE_URL}/escalations${q}`);
+    const res = await apiFetch(`${BASE_URL}/escalations${q}`);
     return res.json();
   },
 
@@ -203,7 +217,7 @@ export const api = {
     user_name: string;
     user_role: Role;
   }) {
-    const res = await fetch(`${BASE_URL}/escalations/${escalationId}/review`, {
+    const res = await apiFetch(`${BASE_URL}/escalations/${escalationId}/review`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -242,7 +256,7 @@ export const api = {
     if (params.limit) q.append('limit', params.limit.toString());
     if (params.offset) q.append('offset', params.offset.toString());
 
-    const res = await fetch(`${BASE_URL}/logs?${q.toString()}`);
+    const res = await apiFetch(`${BASE_URL}/logs?${q.toString()}`);
     return res.json();
   },
 
@@ -251,7 +265,7 @@ export const api = {
     reason: string;
     user_id: string;
   }) {
-    const res = await fetch(`${BASE_URL}/incidents/${incidentId}/logs`, {
+    const res = await apiFetch(`${BASE_URL}/incidents/${incidentId}/logs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -264,7 +278,7 @@ export const api = {
   },
 
   async importLogs(csvContent?: string, datasetName?: string) {
-    const res = await fetch(`${BASE_URL}/logs/import`, {
+    const res = await apiFetch(`${BASE_URL}/logs/import`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ csv_content: csvContent, dataset_name: datasetName })
@@ -277,7 +291,7 @@ export const api = {
   },
 
   async getImportHistory() {
-    const res = await fetch(`${BASE_URL}/logs/imports`);
+    const res = await apiFetch(`${BASE_URL}/logs/imports`);
     return res.json();
   },
 
@@ -296,7 +310,7 @@ export const api = {
     method: string;
     recorded_verified_outcomes_count: number;
   }> {
-    const res = await fetch(`${BASE_URL}/similarity/search`, {
+    const res = await apiFetch(`${BASE_URL}/similarity/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -306,7 +320,7 @@ export const api = {
 
   // Recommendations
   async getRecommendations(incidentId: string) {
-    const res = await fetch(`${BASE_URL}/recommendations/${incidentId}`);
+    const res = await apiFetch(`${BASE_URL}/recommendations/${incidentId}`);
     return res.json();
   },
 
@@ -317,7 +331,7 @@ export const api = {
     userId: string;
     incidentId?: string;
   }): Promise<{ reply: string; source_incidents?: string[]; mode: 'rule-based' | 'ai-assisted' }> {
-    const res = await fetch(`${BASE_URL}/chat`, {
+    const res = await apiFetch(`${BASE_URL}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -333,7 +347,7 @@ export const api = {
     user_name: string;
     user_role: Role;
   }) {
-    const res = await fetch(`${BASE_URL}/incidents/${incidentId}/comments`, {
+    const res = await apiFetch(`${BASE_URL}/incidents/${incidentId}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -346,30 +360,30 @@ export const api = {
     notifications: NotificationItem[];
     unread_count: number;
   }> {
-    const res = await fetch(`${BASE_URL}/notifications?user_id=${params.user_id}&role=${params.role}`);
+    const res = await apiFetch(`${BASE_URL}/notifications?user_id=${params.user_id}&role=${params.role}`);
     return res.json();
   },
 
   async markNotificationRead(id: string) {
-    const res = await fetch(`${BASE_URL}/notifications/${id}/read`, { method: 'PUT' });
+    const res = await apiFetch(`${BASE_URL}/notifications/${id}/read`, { method: 'PUT' });
     return res.json();
   },
 
   // Audit
   async getAuditTrail(): Promise<{ events: AuditEvent[] }> {
-    const res = await fetch(`${BASE_URL}/audit`);
+    const res = await apiFetch(`${BASE_URL}/audit`);
     return res.json();
   },
 
   // Knowledge Base
   async getKnowledgeBase(): Promise<{ items: ResolutionKnowledge[] }> {
-    const res = await fetch(`${BASE_URL}/knowledge`);
+    const res = await apiFetch(`${BASE_URL}/knowledge`);
     return res.json();
   },
 
   // Demo Reset
   async resetDemoData() {
-    const res = await fetch(`${BASE_URL}/demo/reset`, { method: 'POST' });
+    const res = await apiFetch(`${BASE_URL}/demo/reset`, { method: 'POST' });
     return res.json();
   }
 };

@@ -196,6 +196,17 @@ export default function App() {
         {/* Scrollable Workspace Viewport */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-[#0b1120]">
           <div className="max-w-7xl mx-auto">
+            {dataError && (
+              <div role="alert" className="mb-5 flex items-center justify-between gap-4 rounded-xl border border-rose-800/70 bg-rose-950/40 px-4 py-3 text-sm text-rose-200">
+                <span>Application data could not be loaded from the API: {dataError}. Displayed data may be incomplete.</span>
+                <button
+                  onClick={() => void refreshData()}
+                  className="shrink-0 rounded-lg border border-rose-700 px-3 py-1.5 text-xs font-semibold hover:bg-rose-900/50"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
             {currentTab === 'overview' && (
               <OverviewView
                 analytics={analytics}

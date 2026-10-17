@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import { timingSafeEqual } from 'node:crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +24,19 @@ async function startServer() {
 
   app.use(express.json({ limit: '15mb' }));
   app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+
+  app.use('/api', (req, res, next) => {
+    const expectedToken = process.env.INCIDENTIQ_API_TOKEN;
+    if (!expectedToken) return next();
+
+    const suppliedToken = req.get('x-incidentiq-api-token') || '';
+    const expectedBytes = Buffer.from(expectedToken);
+    const suppliedBytes = Buffer.from(suppliedToken);
+    if (expectedBytes.length !== suppliedBytes.length || !timingSafeEqual(expectedBytes, suppliedBytes)) {
+      return res.status(401).json({ error: 'Invalid API gateway token.' });
+    }
+    next();
+  });
 
   // Mount API router
   app.use('/api', apiRouter);

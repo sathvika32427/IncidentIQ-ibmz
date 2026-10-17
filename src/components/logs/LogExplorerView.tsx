@@ -41,6 +41,7 @@ export const LogExplorerView: React.FC<LogExplorerViewProps> = ({
   const [limit] = useState(30);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Link Evidence Modal State
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
@@ -57,6 +58,7 @@ export const LogExplorerView: React.FC<LogExplorerViewProps> = ({
   const fetchLogs = async (requestedOffset = offset) => {
     try {
       setLoading(true);
+      setLoadError(null);
       const res = await api.getLogs({
         component: selectedComponent,
         event_id: selectedEventId,
@@ -74,6 +76,7 @@ export const LogExplorerView: React.FC<LogExplorerViewProps> = ({
       setMonths(res.months || []);
     } catch (err) {
       console.error(err);
+      setLoadError(err instanceof Error ? err.message : 'Unable to load log records.');
     } finally {
       setLoading(false);
     }
@@ -156,6 +159,12 @@ export const LogExplorerView: React.FC<LogExplorerViewProps> = ({
           <strong className="text-slate-300">Dataset Context:</strong> The ingested telemetry originates           from the <strong>LogHub Linux 2k structured dataset</strong> (Linux_2k.log_structured.csv), a public Linux log benchmark used for demonstration and investigation. These are not verified IBM Z production logs.
         </p>
       </div>
+
+      {loadError && (
+        <div role="alert" className="rounded-xl border border-rose-800/70 bg-rose-950/40 px-4 py-3 text-sm text-rose-200">
+          Log data could not be loaded from the API: {loadError}
+        </div>
+      )}
 
       {/* Search & Filter Ribbon */}
       <div className="bg-[#0f172a] border border-slate-800/80 rounded-2xl p-4 space-y-3 shadow-sm">

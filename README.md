@@ -124,6 +124,7 @@ The server loads `.env` from the project working directory. The repository's `.g
 | `HOST` | HTTP bind address | Development: `0.0.0.0`; production: `127.0.0.1`; optional |
 | `NODE_ENV` | Select development middleware or production static serving | Development unless set to `production`; optional |
 | `INCIDENTIQ_DB_PATH` | SQLite database file path | `data/incidentiq.sqlite`; optional |
+| `INCIDENTIQ_API_TOKEN` | Shared server-to-server token required by the API gateway | Unset for local use; required on the proxied production backend |
 | `GEMINI_API_KEY` | Server-side credential for Gemini chat and recommendations | Optional; AI features are unavailable without it |
 
 For local development, create `.env` only if it does not already exist, then edit it:
@@ -141,6 +142,7 @@ HOST=127.0.0.1
 NODE_ENV=development
 # GEMINI_API_KEY=<set privately if Gemini is required>
 # INCIDENTIQ_DB_PATH=<optional absolute path to a persistent SQLite file>
+# INCIDENTIQ_API_TOKEN=<set privately on the proxied production backend>
 ```
 
 The key is read by the server and must not be placed in frontend code or committed to Git.
@@ -186,20 +188,106 @@ There is no project-level automated test script or checked-in test suite in the 
 
 ## Deployment
 
-The Express server can serve a Vite production build when `NODE_ENV=production`:
+Vercel hosts the Vite frontend and the `/api/*` Vercel function in [api/[...path].ts](./api/[...path].ts) forwards API requests to the existing Express server. The Express server must run separately on a host with persistent storage. Vercel's function filesystem is not the application's persistent SQLite database; do not run the SQLite application database inside a Vercel function.
 
-```powershell
+### Configure the persistent Express backend
+
+Deploy the repository's existing Node/Express application on a VM or another service that provides durable disk storage. Keep `data/Linux_2k.log_structured.csv` in the release directory. Use Node.js `>=22.13.0`. Configure a persistent database path outside disposable release directories. If starting with an empty database, `initDatabase()` seeds the demo users, four demo incidents, associated investigation/escalation records, and imports the bundled CSV. Existing SQLite files are not reset; preserve and back them up.
+
+```bash
+# On the backend host, from the deployed project directory:
+node --version
+command -v node
 npm ci
 npm run build
-$env:NODE_ENV = 'production'
-$env:HOST = '127.0.0.1'
-$env:PORT = '3000'
-npm run start
 ```
 
-Check the local server with `Invoke-RestMethod http://127.0.0.1:3000/api/health`. Production mode serves the generated `dist` frontend and defaults to loopback. Keep the database at a persistent path and back it up before upgrades.
+Create the service account if it does not already exist, make the persistent directories, and ensure the service account owns the deployed project and its `node_modules`. Create a protected backend environment file readable only by that account. Keep the API server on loopback behind an HTTPS reverse proxy:
 
-IBM LinuxONE is an intended target, not a verified deployment. SSH access to the previously supplied VM was unavailable during preparation, so its current OS and architecture, s390x dependency installation, and remote application health have not been confirmed. No deployment automation or service configuration is included in the root npm scripts. Verify the VM and runtime on the target before relying on this deployment path; do not infer LinuxONE support from local builds.
+```dotenv
+NODE_ENV=production
+HOST=127.0.0.1
+PORT=3000
+INCIDENTIQ_DB_PATH=/var/lib/incidentiq/incidentiq.sqlite
+INCIDENTIQ_API_TOKEN=<same random secret configured in Vercel>
+```
+
+```bash
+# Backend host: create the account only if needed; do not replace an existing database.
+id incidentiq >/dev/null 2>&1 || sudo useradd --system --home-dir /opt/incidentiq --shell /usr/sbin/nologin incidentiq
+sudo install -d -o incidentiq -g incidentiq -m 0750 /opt/incidentiq/app
+sudo install -d -o incidentiq -g incidentiq -m 0750 /var/lib/incidentiq
+sudo install -d -o root -g incidentiq -m 0750 /etc/incidentiq
+sudoedit /etc/incidentiq/incidentiq.env
+sudo chmod 0640 /etc/incidentiq/incidentiq.env
+
+# Create a systemd unit. Replace /usr/bin/node with the path printed by command -v node.
+sudo tee /etc/systemd/system/incidentiq-api.service <<'UNIT'
+[Unit]
+Description=IncidentIQ Express API
+After=network.target
+
+[Service]
+Type=simple
+User=incidentiq
+Group=incidentiq
+WorkingDirectory=/opt/incidentiq/app
+EnvironmentFile=/etc/incidentiq/incidentiq.env
+ExecStart=/usr/bin/node /opt/incidentiq/app/node_modules/tsx/dist/cli.mjs server.ts
+Restart=on-failure
+RestartSec=5
+ProtectSystem=strict
+ReadWritePaths=/var/lib/incidentiq
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl daemon-reload
+sudo systemctl enable --now incidentiq-api
+sudo systemctl status incidentiq-api --no-pager
+```
+
+If the database path does not exist, SQLite creates it on startup and the application seeds its demo records. If a database already exists at the selected path, keep it; do not copy over or delete it. Back it up before upgrades.
+
+Verify the backend directly from its host before connecting Vercel. Since the production API token is enabled, include it in the request header; do not paste the real token into shell history:
+
+```bash
+read -rsp 'IncidentIQ API token: ' INCIDENTIQ_API_TOKEN; echo
+curl -fsS -H "x-incidentiq-api-token: $INCIDENTIQ_API_TOKEN" http://127.0.0.1:3000/api/health
+curl -fsS -H "x-incidentiq-api-token: $INCIDENTIQ_API_TOKEN" http://127.0.0.1:3000/api/incidents
+curl -fsS -H "x-incidentiq-api-token: $INCIDENTIQ_API_TOKEN" http://127.0.0.1:3000/api/analytics/overview
+unset INCIDENTIQ_API_TOKEN
+```
+
+Inspect service logs with `sudo journalctl -u incidentiq-api -n 100 --no-pager`; restart after a failure with `sudo systemctl restart incidentiq-api`.
+
+`/api/health` should report `healthy`. The API's analytics and incident listing query the configured SQLite database.
+
+### Configure and deploy the Vercel frontend
+
+Set these **server-side Vercel Project Environment Variables** for Production and Preview as appropriate:
+
+| Variable | Value |
+|---|---|
+| `INCIDENTIQ_API_ORIGIN` | The HTTPS origin of the Express backend, for example `https://incidentiq-api.example.com` (no `/api` suffix) |
+| `INCIDENTIQ_API_TOKEN` | A high-entropy random secret; set the identical value in the backend environment file |
+
+The Vercel function forwards each `/api/...` request, including its method, query string, and request body, to the configured origin, and adds the shared token as a server-to-server header. The Express server checks that token when it is configured. The token is not embedded in the React bundle. Do not expose it in a `VITE_*` variable. Configure the backend origin with HTTPS and do not make the SQLite file itself public.
+
+Then deploy from the repository root:
+
+```bash
+npm ci
+npm run lint
+npm run build
+npx vercel --prod
+```
+
+The deployment configuration in [vercel.json](./vercel.json) builds the Vite frontend to `dist`; Vercel discovers the API function under `api/`. After deployment, check `https://<your-vercel-domain>/api/health`, `https://<your-vercel-domain>/api/incidents`, and `https://<your-vercel-domain>/api/analytics/overview`. The health endpoint must return `healthy`, and incident/analytics data should correspond to the persistent backend database.
+
+Vercel alone cannot provide durable persistence for this SQLite application. If no separate backend with persistent storage is configured, the proxy returns `503` with a configuration error rather than presenting an empty dashboard. The frontend cannot create durable incident records until both Vercel variables are set and the Express backend is reachable.
+
+The existing application has not been deployed or verified on Vercel or LinuxONE in this change. IBM LinuxONE remains an intended target; confirm the host OS, architecture, Node.js/SQLite runtime, and remote health response on the target before claiming support.
 
 ## Limitations and possible next steps
 

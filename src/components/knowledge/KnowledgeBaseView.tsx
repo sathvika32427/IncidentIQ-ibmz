@@ -7,14 +7,17 @@ export const KnowledgeBaseView: React.FC = () => {
   const [items, setItems] = useState<ResolutionKnowledge[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchKb = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const res = await api.getKnowledgeBase();
       setItems(res.items);
     } catch (err) {
       console.error(err);
+      setLoadError(err instanceof Error ? err.message : 'Unable to load knowledge records.');
     } finally {
       setLoading(false);
     }
@@ -42,6 +45,12 @@ export const KnowledgeBaseView: React.FC = () => {
           Stored procedures and outcomes are references for human review. Reuse events and independent verifier identities are not recorded by this application.
         </p>
       </div>
+
+      {loadError && (
+        <div role="alert" className="rounded-xl border border-rose-800/70 bg-rose-950/40 px-4 py-3 text-sm text-rose-200">
+          Knowledge data could not be loaded from the API: {loadError}
+        </div>
+      )}
 
       {/* Search */}
       <div className="bg-[#0f172a] border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between gap-4">
