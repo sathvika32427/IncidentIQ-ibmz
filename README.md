@@ -24,29 +24,21 @@ The project is designed for IBM Z and LinuxONE operations scenarios. It is not c
 
 Similarity, stored procedures, and recorded outcomes are investigation references for people to review. They do not establish that a past remediation will work in a new environment.
 
-## How it works
+## How It Works
 
-1. A reporter or analyst registers an incident with its observed symptoms and affected system.
-2. An analyst reviews keyword-matched incidents and searches the LogHub Linux sample logs.
-3. Relevant source log lines can be linked to the incident; investigation actions and their outcomes are recorded.
-4. An analyst records a resolution outcome or requests escalation when manager review is needed.
-5. Teams can review the stored incident, evidence, action history, audit trail, and analytics.
+1. **Register an Incident** — A reporter or analyst records the incident, including its observed symptoms and affected system.
 
-```mermaid
-flowchart TD
-    A[Register incident] --> B[Search incident memory]
-    A --> C[Search sample Linux logs]
-    B --> D[Review similarity and recorded outcomes]
-    C --> E[Link relevant source lines]
-    D --> F[Record investigation action and outcome]
-    E --> F
-    F --> G{Further review needed?}
-    G -->|Yes| H[Request escalation]
-    H --> I[Manager reviews request]
-    G -->|No| J[Record resolution outcome]
-    I --> F
-    J --> K[Retain incident history for later review]
-```
+2. **Search Incident Memory** — The analyst searches previously recorded incidents to find similar cases and review their investigation history and outcomes.
+
+3. **Search Sample Logs** — The analyst searches the LogHub Linux sample logs for relevant log entries.
+
+4. **Link Evidence** — Relevant source log lines are linked to the incident to support the investigation.
+
+5. **Record Investigation Actions** — The analyst documents the actions taken and their outcomes.
+
+6. **Resolve or Escalate** — The analyst records the resolution outcome or requests escalation when manager review is needed.
+
+7. **Review Incident History** — Teams can review stored incident details, linked evidence, investigation history, audit trail, and analytics.
 
 ## Architecture
 
