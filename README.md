@@ -1,211 +1,229 @@
-# IncidentIQ — AI-Powered Incident Memory and Resolution Platform for IBM Z
+# IncidentIQ
 
-**Team:** Zenvora  
-**Tagline:** *Learn from every incident. Resolve the next one smarter.*  
-**Target platform:** IBM LinuxONE, subject to deployment verification.
+IncidentIQ is an incident memory and investigation-support platform designed to help operations teams retrieve relevant historical incidents, examine supporting evidence, and learn from previously recorded investigation outcomes.
+
+*Learn from every incident. Resolve the next one smarter.*
+
+Team Zenvora's submission to the IBM Z Datathon 2026, **Wildcard — Beyond the Obvious**.
+
+## Overview
+
+Operational teams need more than incident dashboards: they need a way to retain investigation context, relate new symptoms to prior cases, and review what actions were recorded as successful, failed, or inconclusive. IncidentIQ combines incident records, investigation history, log references, and human-reviewed resolution notes in one application.
+
+The project is designed for IBM Z and LinuxONE operations scenarios. It is not connected to live IBM Z systems. Its included Linux logs and incident records are demonstration data.
+
+## Key capabilities
+
+- Register incidents with severity, category, affected system, and reporter details; manage lifecycle status and resolution outcomes.
+- Find stored incidents using keyword-frequency cosine similarity, with percentages, matched terms, and qualitative labels.
+- Search the included Linux log dataset by message text, component, event ID, month, day, and time; link source lines to incidents with a reason.
+- Record investigation actions and outcomes, including supporting log-line references.
+- Claim unassigned work, assign or reassign analysts, and review escalation requests through manager workflows.
+- Review stored audit events, notifications, analyst workload, incident trends, and operational analytics; export analytics as CSV or JSON.
+- Use optional Gemini-assisted chat and recommendations, with rule-based responses when AI is not configured or unavailable.
+
+Similarity, stored procedures, and recorded outcomes are investigation references for people to review. They do not establish that a past remediation will work in a new environment.
+
+## How it works
+
+1. A reporter or analyst registers an incident with its observed symptoms and affected system.
+2. An analyst reviews keyword-matched incidents and searches the LogHub Linux sample logs.
+3. Relevant source log lines can be linked to the incident; investigation actions and their outcomes are recorded.
+4. An analyst records a resolution outcome or requests escalation when manager review is needed.
+5. Teams can review the stored incident, evidence, action history, audit trail, and analytics.
+
+```mermaid
+flowchart TD
+    A[Register incident] --> B[Search incident memory]
+    A --> C[Search sample Linux logs]
+    B --> D[Review similarity and recorded outcomes]
+    C --> E[Link relevant source lines]
+    D --> F[Record investigation action and outcome]
+    E --> F
+    F --> G{Further review needed?}
+    G -->|Yes| H[Request escalation]
+    H --> I[Manager reviews request]
+    G -->|No| J[Record resolution outcome]
+    I --> F
+    J --> K[Retain incident history for later review]
+```
 
 ## Architecture
 
-IncidentIQ keeps its existing React/Vite frontend, Express/TypeScript API, and SQLite database. The Express server is the primary full-stack application; its `/api/health` endpoint reports the actual Node platform and architecture. SQLite uses Node's built-in `node:sqlite` module, so there is no third-party SQLite native npm binding.
+The root npm scripts start the Express application in [server.ts](./server.ts). It serves the React interface through Vite middleware during development and serves the prebuilt `dist` assets in production. The browser calls the same-origin `/api` routes. The Express API accesses the persistent SQLite database through Node's built-in `node:sqlite` module. The included CSV can be imported into the log table and searched through the API.
 
-The default development database is `data/incidentiq.sqlite`. Set `INCIDENTIQ_DB_PATH` to a persistent location outside release directories in deployments. Startup performs additive schema migrations and does not delete or recreate an existing database. The optional Flask preview is not used by the LinuxONE deployment steps below.
+When a server-side `GEMINI_API_KEY` is configured, the application can call Gemini for chat and recommendations. The recommendation flow supplies linked log evidence and recorded investigation actions where available. Chat's Gemini prompt includes a limited list of recent incidents; it is not a general retrieval service for every database record.
 
-Log evidence is imported from `data/Linux_2k.log_structured.csv`, the public LogHub Linux 2k dataset. It is demonstration/investigation evidence, not verified IBM Z production telemetry. The source provides `Month`, `Date`, and `Time`, but no year.
+```mermaid
+flowchart LR
+    U[Browser] -->|page and assets| API[Express server]
+    API -->|development middleware| Vite[Vite]
+    API -->|production static assets| U
+    U --> UI[React and TypeScript UI]
+    UI -->|same-origin /api| API
+    API --> DB[(SQLite via node:sqlite)]
+    CSV[LogHub Linux CSV] -->|import| API
+    API -->|optional server-side requests| Gemini[Google Gemini API]
+```
 
-Similarity is a keyword-frequency cosine score, not TF-IDF or machine learning. A score describes textual similarity only; it does not prove an earlier fix will work. Stored investigation actions and outcomes are references for human review.
+The repository also contains a separate Flask implementation under `backend/`. The root `npm run dev` and `npm run start` scripts use the Express server; this README's setup instructions describe that path.
 
-## Demo identities and access limitations
+## Technology stack
 
-Elena Rostova, Marcus Chen, Alex Rivera, and the other built-in role-switcher accounts are synthetic demo users. The role switcher and backend assignment checks exercise workflows, but the app does not authenticate users. Do not expose it directly to the public Internet or treat these role checks as production authorization. Use a trusted SSH tunnel for demonstrations; add real authentication before public deployment.
+| Layer | Technology | Responsibility |
+|---|---|---|
+| User interface | React, TypeScript | Application views, incident workflows, and typed client code |
+| Frontend build and development | Vite, `@vitejs/plugin-react` | Development middleware and production asset build |
+| Styling and visuals | Tailwind CSS, Lucide React, Three.js | Utility styling, interface icons, and the workflow visualization |
+| API server | Node.js, Express, TypeScript via `tsx` | HTTP API, development/production serving, and server-side integrations |
+| Persistence | SQLite through Node's `node:sqlite` | Incident, log, investigation, assignment, audit, and related records |
+| Optional AI | Google Gemini through `@google/genai` | AI-assisted chat and recommendations when configured |
+| Configuration | dotenv | Load server environment variables from `.env` |
 
-The SQLite audit trail is an ordinary application database table. It is not immutable or tamper-proof. Seeded audit rows are labeled **Seeded demo data**. Reuse counts and independent verifiers are not recorded and therefore are not displayed as measured activity.
+The package declares Node.js `>=22.13.0`. The root npm scripts and `package-lock.json` are used in the setup below. A `bun.lock` file is also present, but Bun is not documented as a supported runtime for this application.
 
-## Local development
+## Data model
 
-Use Node.js 22.13.0 or newer. Bun is not required: this application uses `node:sqlite`, which was not available through the Bun runtime tested during preparation.
+The SQLite schema stores:
+
+- **Users and incidents** — demo user profiles, incident descriptions, status, severity, ownership, and resolution fields.
+- **Investigation actions** — analyst, action description, outcome, notes, and JSON-encoded source-line references.
+- **Logs and evidence links** — imported log fields indexed by original `LineId`; incident links retain the source line and a human-entered matching reason.
+- **Assignments and escalations** — assignment history and escalation requests, including manager decisions.
+- **Resolution knowledge** — stored symptoms, procedures, outcomes, and recorded caveats.
+- **Collaboration and operations** — comments, notifications, and audit events.
+
+The supplied `data/incidentiq.sqlite` contains application records and is used by default. The `data/Linux_2k.log_structured.csv` file is imported as log data when the database is first seeded; the Log Explorer also provides dataset import. Startup applies additive schema migrations. Keep the SQLite file when updating the application.
+
+Seeded incidents, knowledge entries, and audit rows are marked as demo data. Built-in role-switcher identities are synthetic. The audit trail is stored in SQLite and is not immutable or tamper-proof. Reuse events and independent knowledge verifications are not recorded as separate records.
+
+## Installation
+
+### Prerequisites
+
+- Windows PowerShell
+- Node.js 22.13.0 or newer, with npm
+- Git
+
+### Clone and run
 
 ```powershell
+git clone https://github.com/sathvika32427/IncidentIQ-ibmz.git
+Set-Location .\IncidentIQ-ibmz
 npm ci
+
+# Keep the development server local to this machine.
+$env:HOST = '127.0.0.1'
+$env:PORT = '3000'
 npm run dev
 ```
 
-Open `http://localhost:3000`. For a production frontend bundle, run `npm run build`. In production the Express server serves the prebuilt `dist` directory and binds to `127.0.0.1` by default; set `HOST` only when a trusted network proxy or equivalent access control is in place.
+Open [http://localhost:3000](http://localhost:3000). The default server port is `3000`. Development binds to `0.0.0.0` unless `HOST` is set, so the commands above explicitly limit access to the local machine.
 
-## IBM LinuxONE deployment
+The included `data/incidentiq.sqlite` is the default database. If the file is absent, the application initializes the schema and seeds the demo records; the bundled CSV is ingested during initial seeding. Do not delete or replace an existing database to troubleshoot startup.
 
-### Verification status
+## Configuration
 
-The supplied VM details are `linux1@148.100.79.247`. Ubuntu 24.04.4 LTS and `s390x` were previously observed, but could not be verified during this preparation: SSH returned `Permission denied (publickey)`. Do not assume the OS, architecture, or a private-key filename. The commands below must start with live VM checks. Deployment and health checks have **not** been run on LinuxONE.
+The server loads `.env` from the project working directory. The repository's `.gitignore` excludes `.env` and other `.env.*` files. If `.env` already exists, edit it without replacing its contents.
 
-### 1. Verify access, OS, and architecture
+| Variable | Purpose | Default / required |
+|---|---|---|
+| `PORT` | HTTP server port | `3000`; optional |
+| `HOST` | HTTP bind address | Development: `0.0.0.0`; production: `127.0.0.1`; optional |
+| `NODE_ENV` | Select development middleware or production static serving | Development unless set to `production`; optional |
+| `INCIDENTIQ_DB_PATH` | SQLite database file path | `data/incidentiq.sqlite`; optional |
+| `GEMINI_API_KEY` | Server-side credential for Gemini chat and recommendations | Optional; AI features are unavailable without it |
 
-From Windows PowerShell, replace the placeholder with the private-key path you have verified; no key filename is assumed:
+For local development, create `.env` only if it does not already exist, then edit it:
 
 ```powershell
-$SshKey = '<path-to-your-verified-private-key>'
-ssh -i $SshKey -o IdentitiesOnly=yes linux1@148.100.79.247 'cat /etc/os-release; uname -m'
+if (-not (Test-Path .env)) { New-Item -ItemType File .env | Out-Null }
+notepad .env
 ```
 
-Continue with the Ubuntu commands below only if the live output confirms Ubuntu and `s390x`. Check that SSH access is authorized before transferring files.
+Example settings (do not add a real key to source control):
 
-### 2. Build and securely transfer the release from Windows
+```dotenv
+PORT=3000
+HOST=127.0.0.1
+NODE_ENV=development
+# GEMINI_API_KEY=<set privately if Gemini is required>
+# INCIDENTIQ_DB_PATH=<optional absolute path to a persistent SQLite file>
+```
 
-Run in the project directory. The Vite/Tailwind production frontend is built on the development machine because the Tailwind Oxide package does not publish a native Linux s390x binary. The deployed Express server runs on LinuxONE; its `dist` bundle is static browser content.
+The key is read by the server and must not be placed in frontend code or committed to Git.
+
+## Usage
+
+1. Open **Overview** to review incident counts and database-backed analytics.
+2. Use **New Incident** to register a report and inspect it in **Incidents**.
+3. Open **Similar Incident Search** to compare stored descriptions and review matching terms, scores, and labels.
+4. Open **Log Explorer** to search the included CSV data or import a CSV. Select a relevant line to link it to an incident with a reason.
+5. In an incident detail, review linked log messages and record investigation actions with outcomes: `In Progress`, `Successful`, `Failed`, or `Inconclusive`.
+6. Analysts can claim unassigned incidents. Managers can assign analysts and review escalation requests in **Escalation Queue**.
+7. Record the incident resolution outcome separately from investigation-action outcomes. Review history in **Investigation History**, **Knowledge Base**, and **Audit Trail**.
+
+## Data sources
+
+The bundled [Linux_2k.log_structured.csv](./data/Linux_2k.log_structured.csv) is from the [LogHub Linux 2k dataset](https://github.com/logpai/loghub). Its fields are `LineId`, `Month`, `Date`, `Time`, `Level`, `Component`, `PID`, `Content`, `EventId`, and `EventTemplate`. The source contains month, day, and time values, but no year.
+
+These are Linux benchmark sample logs for demonstration and investigation. They are not verified IBM Z production telemetry and are not streamed from a live system. Seeded incident narratives, investigation outcomes, and built-in users are synthetic demonstration content; linked log records retain the CSV's source line identifiers.
+
+## AI integration
+
+The optional Gemini integration uses the `gemini-2.5-flash` model for chat and recommendations. The server checks whether Gemini responds and reports unconfigured, unverified, available, or unavailable status.
+
+Without `GEMINI_API_KEY`, the application continues in rule-based mode and labels responses as not AI-generated. Failed Gemini requests also return a rule-based fallback with an explicit warning. The API key remains server-side. AI is not used for every application feature.
+
+## Security and access control
+
+IncidentIQ has a demonstration role switcher, not user authentication. The selected demo user ID is supplied by the client. The API applies role checks to selected write operations and ownership checks for analyst work, but these checks do not establish a trusted user identity.
+
+Do not expose this application to untrusted networks or use the demo roles as production authorization. Use a protected environment file for secrets, bind to loopback when appropriate, and add real authentication and deployment access controls before any public or operational use. Audit events are ordinary SQLite records, not tamper-proof logs.
+
+## Testing and validation
+
+The root package scripts provide:
+
+```powershell
+npm run lint   # TypeScript check (tsc --noEmit)
+npm run build  # Vite production frontend build
+```
+
+There is no project-level automated test script or checked-in test suite in the root package. These commands do not verify LinuxONE compatibility or a remote deployment.
+
+## Deployment
+
+The Express server can serve a Vite production build when `NODE_ENV=production`:
 
 ```powershell
 npm ci
 npm run build
-
-$Archive = Join-Path $env:TEMP 'incidentiq-release.tar.gz'
-tar.exe -czf $Archive --exclude='.env' --exclude='.env.*' --exclude='node_modules' --exclude='.git' --exclude='data/incidentiq.sqlite*' -C (Get-Location).Path .
-tar.exe -tzf $Archive | Select-String '(^|/)(\.env|incidentiq\.sqlite|node_modules)(/|$)'
-scp -i $SshKey -o IdentitiesOnly=yes $Archive linux1@148.100.79.247:/home/linux1/
+$env:NODE_ENV = 'production'
+$env:HOST = '127.0.0.1'
+$env:PORT = '3000'
+npm run start
 ```
 
-The `Select-String` check should print no excluded secret, database, or dependency paths. The archive includes the frontend build and LogHub CSV, but excludes `.env` and all SQLite database/WAL files.
+Check the local server with `Invoke-RestMethod http://127.0.0.1:3000/api/health`. Production mode serves the generated `dist` frontend and defaults to loopback. Keep the database at a persistent path and back it up before upgrades.
 
-### 3. Install packages and Node.js on the verified Ubuntu s390x VM
+IBM LinuxONE is an intended target, not a verified deployment. SSH access to the previously supplied VM was unavailable during preparation, so its current OS and architecture, s390x dependency installation, and remote application health have not been confirmed. No deployment automation or service configuration is included in the root npm scripts. Verify the VM and runtime on the target before relying on this deployment path; do not infer LinuxONE support from local builds.
 
-```bash
-sudo apt update
-sudo apt install -y ca-certificates curl python3 sqlite3 tar xz-utils
+## Limitations and possible next steps
 
-# Select the latest Node.js 22 release with an official linux-s390x archive.
-NODE_VERSION="$(python3 -c 'import json,urllib.request; releases=json.load(urllib.request.urlopen("https://nodejs.org/dist/index.json")); print(next(r["version"][1:] for r in releases if r["version"].startswith("v22.") and "linux-s390x" in r["files"]))')"
-curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-s390x.tar.xz"
-curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt"
-grep "node-v${NODE_VERSION}-linux-s390x.tar.xz" SHASUMS256.txt | sha256sum -c -
+- Similarity is a keyword-frequency cosine calculation, not machine learning; the percentage measures textual similarity only.
+- Included incidents, users, and knowledge examples contain synthetic/demo records. LogHub data is not live or IBM Z production telemetry.
+- There is no real authentication, and the database audit trail has no tamper protection.
+- Gemini is optional and can be unavailable; rule-based functionality is the fallback.
+- LinuxONE/s390x deployment and runtime compatibility have not been verified.
+- Potential follow-up work includes adding authenticated identities, a maintained automated test suite, and a verified LinuxONE deployment workflow. These are not implemented capabilities.
 
-sudo mkdir -p "/opt/node-v${NODE_VERSION}"
-sudo tar -xJf "node-v${NODE_VERSION}-linux-s390x.tar.xz" -C "/opt/node-v${NODE_VERSION}" --strip-components=1
-sudo ln -sfn "/opt/node-v${NODE_VERSION}" /opt/nodejs
-export PATH="/opt/nodejs/bin:$PATH"
-node --version
-npm --version
-uname -m
-```
+## Project information
 
-The application requires Node 22.13.0 or newer for its runtime/toolchain requirements. No Bun installation or SQLite development headers are needed. Node supplies `node:sqlite`; `tsx` uses esbuild, whose Linux s390x binary package is published. Build-only Vite/Tailwind dependencies are installed on the development machine, not on the server.
-
-### 4. Install the release and configure persistent SQLite
-
-Before choosing a database path, check whether this VM already has an IncidentIQ database:
-
-```bash
-sudo find /opt /var/lib /home/linux1 -type f -name incidentiq.sqlite -print 2>/dev/null
-```
-
-If an existing database is found, **keep it** and set `INCIDENTIQ_DB_PATH` to that path. Do not overwrite, delete, or reinitialize it. For a new VM with no existing database, if the current local incidents should be carried over, create a consistent SQLite backup from Windows and transfer it separately:
-
-```powershell
-$env:INCIDENTIQ_DB_SNAPSHOT = Join-Path $env:TEMP 'incidentiq-initial.sqlite'
-python -c "import os,sqlite3; source=sqlite3.connect(r'data\incidentiq.sqlite'); target=sqlite3.connect(os.environ['INCIDENTIQ_DB_SNAPSHOT']); source.backup(target); target.close(); source.close()"
-scp -i $SshKey -o IdentitiesOnly=yes $env:INCIDENTIQ_DB_SNAPSHOT linux1@148.100.79.247:/home/linux1/
-```
-
-Only on a new VM after confirming that no existing database is present:
-
-```bash
-sudo install -d -o linux1 -g linux1 -m 0750 /var/lib/incidentiq
-if sudo test -e /var/lib/incidentiq/incidentiq.sqlite; then
-  echo "Database already exists; leaving it untouched."
-else
-  sudo install -o linux1 -g linux1 -m 0640 /home/linux1/incidentiq-initial.sqlite /var/lib/incidentiq/incidentiq.sqlite
-fi
-```
-
-Extract each release to its own directory. The stable database path remains outside it:
-
-```bash
-export PATH="/opt/nodejs/bin:$PATH"
-RELEASE_ID="$(date -u +%Y%m%d%H%M%S)"
-RELEASE="/opt/incidentiq/releases/${RELEASE_ID}"
-sudo mkdir -p "$RELEASE"
-sudo tar -xzf /home/linux1/incidentiq-release.tar.gz -C "$RELEASE"
-sudo chown -R linux1:linux1 "$RELEASE"
-cd "$RELEASE"
-npm ci --omit=dev
-sudo ln -sfn "$RELEASE" /opt/incidentiq/current
-sudo install -d -o root -g root -m 0750 /etc/incidentiq
-sudo install -m 0600 /dev/null /etc/incidentiq/incidentiq.env
-sudoedit /etc/incidentiq/incidentiq.env
-```
-
-Set these values in the protected environment file. Add `GEMINI_API_KEY` there only if Gemini is intended; never put it in the frontend or release archive.
-
-```text
-NODE_ENV=production
-HOST=127.0.0.1
-PORT=3000
-INCIDENTIQ_DB_PATH=/var/lib/incidentiq/incidentiq.sqlite
-# GEMINI_API_KEY=<configure privately on the server, if wanted>
-```
-
-### 5. Run as a persistent systemd service
-
-This service uses the existing Express application, release directory, and persistent database path; it does not start a second API or database:
-
-```bash
-sudo tee /etc/systemd/system/incidentiq.service >/dev/null <<'EOF'
-[Unit]
-Description=IncidentIQ Express application
-After=network.target
-
-[Service]
-Type=simple
-User=linux1
-Group=linux1
-WorkingDirectory=/opt/incidentiq/current
-EnvironmentFile=/etc/incidentiq/incidentiq.env
-Environment=PATH=/opt/nodejs/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=/opt/nodejs/bin/node /opt/incidentiq/current/node_modules/tsx/dist/cli.mjs server.ts
-Restart=on-failure
-RestartSec=5
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/var/lib/incidentiq
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable --now incidentiq
-sudo systemctl status incidentiq --no-pager
-```
-
-The production server binds to loopback by default. Keep port 3000 closed to public networks; for a demonstration, create an SSH tunnel from Windows:
-
-```powershell
-ssh -N -L 3000:127.0.0.1:3000 -i $SshKey -o IdentitiesOnly=yes linux1@148.100.79.247
-```
-
-Then open `http://localhost:3000` locally.
-
-### 6. Verify, inspect logs, and recover
-
-```powershell
-ssh -i $SshKey -o IdentitiesOnly=yes linux1@148.100.79.247 'curl -fsS http://127.0.0.1:3000/api/health'
-ssh -i $SshKey -o IdentitiesOnly=yes linux1@148.100.79.247 'curl -fsS "http://127.0.0.1:3000/api/logs?search=logrotate&limit=2"'
-ssh -i $SshKey -o IdentitiesOnly=yes linux1@148.100.79.247 'sudo journalctl -u incidentiq -n 100 --no-pager'
-```
-
-The health JSON reports the running Node platform and architecture; require `linux` and `s390x` before describing the app as running on LinuxONE. To follow logs or restart after a failure:
-
-```bash
-sudo journalctl -u incidentiq -f
-sudo systemctl restart incidentiq
-sudo systemctl status incidentiq --no-pager
-curl -fsS http://127.0.0.1:3000/api/health
-```
-
-For updates, build and transfer a new release as above, run `npm ci --omit=dev` in that release, switch `/opt/incidentiq/current`, and restart the same service. Do not include or replace `/var/lib/incidentiq/incidentiq.sqlite` in a release. Back up that database before upgrades; startup migrations are additive.
-
-## Verification status and limitations
-
-- Local Windows Node/npm, database, API, and frontend checks are performed during development; they do not establish LinuxONE compatibility or a remote deployment.
-- The VM's OS and architecture, remote service start, s390x npm installation, API/frontend access, and persistence after a VM restart remain unverified until the SSH checks above succeed.
-- Similarity is keyword-frequency cosine; AI status distinguishes successful response, configured failure, unverified configuration, and no key. Rule-based functionality remains available without Gemini.
-- The built-in users are synthetic, unauthenticated demo identities. Public deployment requires real authentication and a security review.
+| | |
+|---|---|
+| Project | IncidentIQ |
+| Team | Zenvora |
+| Event | IBM Z Datathon 2026 |
+| Challenge | Wildcard — Beyond the Obvious |
+| Repository | [sathvika32427/IncidentIQ-ibmz](https://github.com/sathvika32427/IncidentIQ-ibmz) |
