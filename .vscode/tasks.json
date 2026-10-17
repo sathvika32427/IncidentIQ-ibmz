@@ -1,0 +1,27 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run IncidentIQ locally",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$env:PORT='3391'; npm.cmd install --no-audit --no-fund; if ($LASTEXITCODE -eq 0) { npm.cmd run dev }"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "Run IncidentIQ on port 3391",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$env:PORT='3391'; node .\\node_modules\\tsx\\dist\\cli.mjs .\\server.ts"
+			],
+			"isBackground": true
+		}
+	]
+}

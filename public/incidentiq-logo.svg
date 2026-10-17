@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 110" width="460" height="110" fill="none">
+  <defs>
+    <linearGradient id="logoBrainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+    <linearGradient id="logoIGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+    <linearGradient id="logoDbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <linearGradient id="logoRingGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0.2" />
+    </linearGradient>
+    <linearGradient id="qGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+  </defs>
+
+  <!-- Left Icon Mark -->
+  <g transform="translate(10, 10)">
+    <!-- Left: Brain Circuit Network -->
+    <g transform="translate(6, 10)">
+      <path d="M 24 5 C 17 5, 10 12, 10 20 C 6 22, 3 27, 4 32 C 2 37, 5 44, 10 47 C 12 52, 19 55, 24 55 C 26 55, 27 54, 28 53" 
+            stroke="url(#logoBrainGrad)" stroke-width="2.5" stroke-linecap="round" fill="none" />
+      <path d="M 14 22 L 20 22 L 24 16" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" />
+      <path d="M 10 32 L 18 32 L 22 38 L 28 38" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" />
+      <path d="M 14 42 L 19 42 L 22 47" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" />
+      <circle cx="24" cy="16" r="2.5" fill="#38bdf8" />
+      <circle cx="14" cy="22" r="2" fill="#38bdf8" />
+      <circle cx="10" cy="32" r="2" fill="#38bdf8" />
+      <circle cx="28" cy="38" r="2.5" fill="#38bdf8" />
+      <circle cx="22" cy="47" r="2" fill="#38bdf8" />
+    </g>
+
+    <!-- Center: 'i' Stem -->
+    <circle cx="48" cy="16" r="6" fill="#38bdf8" />
+    <rect x="43" y="27" width="10" height="28" rx="5" fill="url(#logoIGrad)" />
+
+    <!-- Right: Database Disks -->
+    <g transform="translate(58, 24)">
+      <ellipse cx="13" cy="7" rx="12" ry="4" fill="url(#logoDbGrad)" />
+      <path d="M 1 11 C 1 14, 25 14, 25 11 L 25 16 C 25 19, 1 19, 1 16 Z" fill="url(#logoDbGrad)" opacity="0.9" />
+      <ellipse cx="13" cy="11" rx="12" ry="3.5" fill="#3b82f6" opacity="0.6" />
+      <path d="M 1 19 C 1 22, 25 22, 25 19 L 25 24 C 25 27, 1 27, 1 24 Z" fill="url(#logoDbGrad)" />
+      <ellipse cx="13" cy="19" rx="12" ry="3.5" fill="#6366f1" opacity="0.6" />
+    </g>
+
+    <!-- Orbital Swoosh -->
+    <path d="M 14 66 C 28 80, 70 80, 84 57 C 86 53, 84 49, 80 52 C 70 60, 44 72, 20 62 C 16 60, 13 63, 14 66 Z" 
+          fill="url(#logoRingGrad)" />
+  </g>
+
+  <!-- Wordmark "IncidentIQ" -->
+  <text x="120" y="58" font-family="'Plus Jakarta Sans', 'IBM Plex Sans', sans-serif" font-weight="800" font-size="44" fill="#ffffff" letter-spacing="-1">Incident<tspan fill="url(#qGrad)">IQ</tspan></text>
+
+  <!-- Tagline: "Learn from every incident. Resolve the next one smarter." -->
+  <text x="122" y="82" font-family="'IBM Plex Sans', system-ui, sans-serif" font-weight="400" font-size="13.5" fill="#94a3b8" letter-spacing="0.2">Learn from every incident. Resolve the next one smarter.</text>
+  
+  <!-- Subtle IBM Z Badge -->
+  <g transform="translate(370, 24)">
+    <rect width="66" height="20" rx="4" fill="#0f172a" stroke="#1e293b" />
+    <text x="33" y="14" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="600" fill="#38bdf8" text-anchor="middle" letter-spacing="1">IBM Z</text>
+  </g>
+</svg>

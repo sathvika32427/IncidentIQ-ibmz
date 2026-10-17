@@ -1,0 +1,6 @@
+{
+  "name": "IncidentIQ — AI-Powered Incident Memory and Resolution Platform for IBM Z",
+  "description": "Learn from every incident. Resolve the next one smarter. Enterprise incident memory, log evidence matching, outcome recording, and human-reviewed escalation for IBM Z and LinuxONE.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

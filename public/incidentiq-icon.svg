@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <linearGradient id="brainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+    <linearGradient id="iGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+    <linearGradient id="dbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0.2" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Dark container background for standalone use -->
+  <rect width="120" height="120" rx="24" fill="#0b1329" />
+  
+  <!-- Subtle glowing background aura -->
+  <circle cx="60" cy="58" r="42" fill="#0284c7" opacity="0.12" filter="url(#glow)" />
+
+  <!-- Left: Brain Circuit Network -->
+  <g transform="translate(14, 22)">
+    <!-- Brain Silhouette with Nodes -->
+    <path d="M 28 6 C 20 6, 12 14, 12 24 C 7 26, 4 32, 5 38 C 3 44, 6 52, 12 56 C 14 62, 22 66, 28 66 C 30 66, 32 65, 33 64" 
+          stroke="url(#brainGrad)" stroke-width="3" stroke-linecap="round" fill="none" />
+    
+    <!-- Circuit internal nodes and lines -->
+    <path d="M 16 26 L 24 26 L 28 20" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+    <path d="M 12 38 L 22 38 L 27 46 L 33 46" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+    <path d="M 16 50 L 22 50 L 25 56" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+    
+    <!-- Circuit Dots -->
+    <circle cx="28" cy="20" r="3" fill="#38bdf8" />
+    <circle cx="16" cy="26" r="2.5" fill="#38bdf8" />
+    <circle cx="12" cy="38" r="2.5" fill="#38bdf8" />
+    <circle cx="33" cy="46" r="3" fill="#38bdf8" />
+    <circle cx="25" cy="56" r="2.5" fill="#38bdf8" />
+  </g>
+
+  <!-- Center: Stylized 'i' Stem -->
+  <!-- 'i' Dot: Cyan glowing sphere -->
+  <circle cx="60" cy="28" r="7.5" fill="#38bdf8" />
+  
+  <!-- 'i' Body -->
+  <rect x="54" y="42" width="12" height="34" rx="6" fill="url(#iGrad)" />
+
+  <!-- Right: Stacked Database Disks -->
+  <g transform="translate(72, 38)">
+    <!-- Disk 1 (Top) -->
+    <ellipse cx="16" cy="8" rx="14" ry="4.5" fill="url(#dbGrad)" />
+    <!-- Disk 2 (Middle) -->
+    <path d="M 2 13 C 2 16, 30 16, 30 13 L 30 19 C 30 22, 2 22, 2 19 Z" fill="url(#dbGrad)" opacity="0.9" />
+    <ellipse cx="16" cy="13" rx="14" ry="4" fill="#3b82f6" opacity="0.6" />
+    <!-- Disk 3 (Bottom) -->
+    <path d="M 2 23 C 2 26, 30 26, 30 23 L 30 29 C 30 32, 2 32, 2 29 Z" fill="url(#dbGrad)" />
+    <ellipse cx="16" cy="23" rx="14" ry="4" fill="#6366f1" opacity="0.6" />
+  </g>
+
+  <!-- Bottom Orbital Swoosh connecting Brain, i, and Memory DB -->
+  <path d="M 18 80 C 35 96, 85 96, 102 68 C 105 63, 103 58, 98 62 C 86 72, 54 86, 26 74 C 21 72, 17 76, 18 80 Z" 
+        fill="url(#ringGrad)" />
+</svg>

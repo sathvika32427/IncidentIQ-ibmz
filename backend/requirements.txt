@@ -1,0 +1,8 @@
+# IncidentIQ Python Backend Requirements
+# Verified for Ubuntu 24.04 on IBM LinuxONE (s390x) & x86_64
+flask>=3.0.0
+flask-cors>=4.0.0
+python-dotenv>=1.0.0
+# sqlite3 is built directly into Python standard library!
+# For optional AI acceleration if configured:
+google-genai>=0.1.1
